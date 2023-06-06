@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ChatClient": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    }
+  }
+}
