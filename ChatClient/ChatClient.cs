@@ -167,7 +167,7 @@ namespace ChatClient
             ChatMessage logoutMessage;
 
             ChatMessage msgForPeer;
-            string loginId;
+            string loginId;            
             string recipientId;
             string msg;
             int numberOfMsgsToSend;

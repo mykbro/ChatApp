@@ -22,7 +22,7 @@ namespace ChatClient
 
         static private readonly SerializationMode _serializationMode = SerializationMode.Custom;
         static private readonly int _serverPort = 2812;
-        static private readonly IPAddress _serverIp = new IPAddress(new byte[] { 192, 168, 1, 25 });
+        static private IPAddress _serverIp = new IPAddress(new byte[] { 192, 168, 1, 25 });
         //static private IPAddress _serverIp = new IPAddress(new byte[] { 192, 168, 204, 128 });
         //static private IPAddress _serverIp = IPAddress.Loopback;
 
@@ -42,8 +42,8 @@ namespace ChatClient
        
         static void Main(string[] args)
         {
-            //TestConnectionsWithRetries();
-            SpawnMultipleConnectionsMain(args, 10000); 
+            TestConnectionsWithRetries();
+            //SpawnMultipleConnectionsMain(args, 10000); 
             //ManageUserCommands();            
         }
 
