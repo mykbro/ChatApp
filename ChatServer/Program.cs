@@ -39,7 +39,6 @@ namespace ChatServer
             
             CancellationTokenSource cts = new CancellationTokenSource();
             IPEndPoint listSocketEndPoint = new IPEndPoint(IPAddress.Any, 2812);
-
             Socket listeningSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             listeningSocket.Bind(listSocketEndPoint);
             listeningSocket.Listen();
@@ -50,8 +49,7 @@ namespace ChatServer
 
             //Timer msgNumberInASecTimer = new Timer(ShowMessageThroughput, null, 1000, 1000);
             
-            _ = ShowMessageThroughputEverySecAsync(cts.Token);           //the Timer above doesn't work in Release... dunno why :|           
-           
+            _ = ShowMessageThroughputEverySecAsync(cts.Token);           //the Timer above doesn't work in Release... dunno why :|  
             
 
             bool exit = false;          

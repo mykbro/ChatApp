@@ -12,8 +12,7 @@ namespace ChatClient
 {
         
     internal class Program
-    {
-        static private readonly ChatMessage _msgListToShare;
+    {       
         //static private Socket? _connectionSocket = null;
         //static private SocketObjectWriter<ChatMessage>? _socketWriter = null;
         //static private SocketObjectReader<ChatMessage>? _socketReader = null;
@@ -21,12 +20,12 @@ namespace ChatClient
         static private bool _connecting = false;
         static CancellationTokenSource? _connectionCancellationSource;
 
-
+        static private readonly SerializationMode _serializationMode = SerializationMode.Custom;
         static private readonly int _serverPort = 2812;
-        static private IPAddress _serverIp = new IPAddress(new byte[] { 192, 168, 1, 25 });
+        static private readonly IPAddress _serverIp = new IPAddress(new byte[] { 192, 168, 1, 25 });
         //static private IPAddress _serverIp = new IPAddress(new byte[] { 192, 168, 204, 128 });
         //static private IPAddress _serverIp = IPAddress.Loopback;
-       
+
 
         //static SemaphoreSlim _numConnectionsSpawnedSemaphore = new SemaphoreSlim(1);
         /*
@@ -39,8 +38,14 @@ namespace ChatClient
             _msgListToShare = new MessageList(temp);
         }
         */
-
-        ///////////////
+       
+       
+        static void Main(string[] args)
+        {
+            //TestConnectionsWithRetries();
+            SpawnMultipleConnectionsMain(args, 10000); 
+            //ManageUserCommands();            
+        }
 
         static void TestConnectionsWithRetries()
         {
@@ -82,7 +87,7 @@ namespace ChatClient
                         //Thread.Sleep(20);
                         //Task.Run(() => SpawnNewConnectionAsync(serverIp, 5, 2, 10, cts.Token));
                         //new Thread(() => SpawnNewConnectionAsync()).Start();
-                        SpawnNewConnectionAsync(_serverIp, 5, 2, 10, cts.Token);
+                        SpawnNewConnectionAsync(_serverIp, _serverPort, 5, 2, 10, cts.Token);
                     }
                 }
                 else if(cmd == "x")
@@ -92,19 +97,6 @@ namespace ChatClient
                     cts = new CancellationTokenSource();
                 }
             }
-        }
-
-        static void Main(string[] args)
-        {
-
-            //TestConnectionsWithRetries();
-
-            SpawnMultipleConnectionsMain(args, 10000);
-
-            /*
-            ChatClient client = new ChatClient(_serverIp, _serverPort, "pippo", 0, SerializationMode.Mine);
-            ManageUserCommands(client);
-            */
         }
         
         static void SpawnMultipleConnectionsMain(string[] args, int numClients)
@@ -124,7 +116,7 @@ namespace ChatClient
 
             for (int i = 0; i < clients.Length; i++) 
             { 
-                clients[i] = new ChatClient(_serverIp, _serverPort, i.ToString(), 100, SerializationMode.Custom);
+                clients[i] = new ChatClient(_serverIp, _serverPort, i.ToString(), 100, _serializationMode);
                 clients[i].ConnectAsync(3, 4).Wait();    //we wait synchronously for each client to connect
             }
 
@@ -134,7 +126,7 @@ namespace ChatClient
             {
                 if (clients[i].Connected) 
                 {
-                    clients[i].LogResponsesAsync();
+                    _ = clients[i].LogResponsesAsync();
                 }
             }
 
@@ -143,7 +135,7 @@ namespace ChatClient
                 if (clients[i].Connected)
                 {
                     //clients[i].CreateTrafficAsync(0, 100, 1000, 100, numClients);                    
-                    clients[i].CreateRandomLoginLogoutTrafficAsync(0, 100, 1000, 100, numClients);                    
+                    _ = clients[i].CreateRandomLoginLogoutTrafficAsync(0, 100, 1000, 100, numClients);                    
                 }
             }
 
@@ -155,17 +147,15 @@ namespace ChatClient
         }
         
 
-        static void ManageUserCommands(ChatClient client)
+        static void ManageUserCommands()
         {
             bool exit = false;
             string[] cmdTokens;
-            string cmd;          
-            CancellationTokenSource connectionCts = null;
-            ChatMessage msgToSend;
-
+            string cmd; 
+            ChatClient client = new ChatClient(_serverIp, _serverPort, "pippo", 0, _serializationMode);
 
             while (!exit)
-            {
+            {                
                 cmdTokens = Console.ReadLine().Split(' ', 4);   //max 4 splits for: msg <from> <to> <msg>
                 cmd = cmdTokens[0];
 
@@ -177,7 +167,7 @@ namespace ChatClient
                 }
                 else if (cmd.Equals("Connect", StringComparison.OrdinalIgnoreCase))
                 {
-                    TryToConnectAsync(client);
+                    _ = TryToConnectAsync(client);
                 }
                 else if (cmd.Equals("Disconnect", StringComparison.OrdinalIgnoreCase))
                 {
@@ -194,7 +184,7 @@ namespace ChatClient
                     if(Connecting)
                     {
                         Console.WriteLine("Connection aborted !");                       
-                        _connectionCancellationSource.Cancel();
+                        _connectionCancellationSource!.Cancel();        //if we're connecting the CTS is not null
                     }                        
                 }
                 else if(cmd.Equals("Login", StringComparison.OrdinalIgnoreCase))
@@ -388,7 +378,7 @@ namespace ChatClient
 
 
 
-        static async Task SpawnNewConnectionAsync(IPAddress serverIp, int maxConnAttempts, int connTimeoutInSeconds, int randomPeriodBetweenWritesInSeconds, CancellationToken cancellationToken = default)
+        static async Task SpawnNewConnectionAsync(IPAddress serverIp, int serverPort, int maxConnAttempts, int connTimeoutInSeconds, int randomPeriodBetweenWritesInSeconds, CancellationToken cancellationToken = default)
         {
             //int numConn = RandomNumberGenerator.GetInt32(10000);            
 
@@ -412,7 +402,7 @@ namespace ChatClient
 
                     try 
                     { 
-                        await newConnSocket.ConnectAsync(serverIp, 2812, cts.Token);                        
+                        await newConnSocket.ConnectAsync(serverIp, serverPort, cts.Token);                        
                     }
                     catch(OperationCanceledException ex)
                     {
@@ -456,7 +446,7 @@ namespace ChatClient
     
         static async Task SendToServerUntilCancelledAsync(Socket s, ChatMessage msgToSend, int randomPeriodBetweenWritesInSeconds, CancellationToken cancellationToken = default)
         {            
-            var msgWriter = new SocketObjectWriter<ChatMessage>(s, SerializationMode.DataContract, false);           
+            var msgWriter = new SocketObjectWriter<ChatMessage>(s, _serializationMode, false);           
             int randomPeriodBetweenWritesInMillis = randomPeriodBetweenWritesInSeconds * 1000;
             
             while(true)
